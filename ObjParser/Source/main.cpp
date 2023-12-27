@@ -19,142 +19,113 @@
 
 void processInput(GLFWwindow *window, glm::mat4 &model, glm::vec3 &lightPos);
 
-int main()
-{
-	PRINT(std::endl << "MAIN >> Initialization..." << std::endl);
-	Context context(800, 600, "PROJECT1");
+int main() {
+    PRINT(std::endl << "MAIN >> Initialization..." << std::endl);
+    Context context(800, 600, "PROJECT1");
 
-	ModelLoader cube("Resources/Models", "Teapot.obj");
-	ModelLoader lightSource("Resources/Models", "cube.obj");
+    ModelLoader cube("Resources/Models", "Teapot.obj");
+    ModelLoader lightSource("Resources/Models", "cube.obj");
 
-	glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
-	glm::vec3 lightPosition(10.0f, 0, 0.0f);
-	glm::vec3 cameraPosition(0.0f, 10.0f, 50.0f);
+    glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightPosition(10.0f, 0, 0.0f);
+    glm::vec3 cameraPosition(0.0f, 10.0f, 50.0f);
 
-	VertexArrayObject VAO;
-	VertexBufferObject VBO(cube.GetVertexData());
-	IndexBuffer IBO(cube.GetIndexData());
+    VertexArrayObject VAO;
+    VertexBufferObject VBO(cube.GetVertexData());
+    IndexBuffer IBO(cube.GetIndexData());
 
-	VAO.AddBuffer(&VBO, AttribPointerLayout{ 0, 3, 8, 0 }); // Index, size, stride, offset
-	VAO.AddBuffer(&VBO, AttribPointerLayout{ 1, 2, 8, 3 }); // Index, size, stride, offset
-	VAO.AddBuffer(&VBO, AttribPointerLayout{ 2, 3, 8, 5 }); // Index, size, stride, offset
+    VAO.AddBuffer(&VBO, AttribPointerLayout{ 0, 3, 8, 0 });
+    VAO.AddBuffer(&VBO, AttribPointerLayout{ 1, 2, 8, 3 });
+    VAO.AddBuffer(&VBO, AttribPointerLayout{ 2, 3, 8, 5 });
 
-	Shader cubeShader(Reader::Open("Resources/Shaders/Default_VS.glsl").c_str(), Reader::Open("Resources/Shaders/Default_FS.glsl").c_str());
-	cubeShader.Use();
-	cubeShader.GetActiveUniformList();
+    Shader cubeShader(Reader::Open("Resources/Shaders/Default_VS.glsl").c_str(), Reader::Open("Resources/Shaders/Default_FS.glsl").c_str());
+    cubeShader.Use();
+    cubeShader.GetActiveUniformList();
 
-	Material cubeMat(cube.material, cubeShader);
+    Material cubeMat(cube.material, cubeShader);
 
-	// Create transformations
-	glm::mat4 view = glm::mat4(1.0f);
-	glm::mat4 projection = glm::mat4(1.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)context.GetScreenWidth() / (float)context.GetScreenHeight(), 0.1f, 100.0f);
 
-	Texture textureTest("Resources/Images/test.png");
-	textureTest.Bind();
-	cubeShader.SetUniform1i("tex", 0);
+    cubeShader.SetUniform3fv("lightColor", lightColor);
+    cubeShader.SetUniform3fv("lightPosition", lightPosition);
+    cubeShader.SetUniform3fv("viewPos", cameraPosition);
+    cubeShader.SetUniformMat4fv("projection", projection);
 
+    VAO.Unbind();
+    IBO.Unbind();
+    VBO.Unbind();
 
-	glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-	//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-	model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-	//model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+    VertexArrayObject VAO2;
+    VertexBufferObject VBO2(lightSource.GetVertexData());
+    IndexBuffer IBO2(lightSource.GetIndexData());
+    VAO2.AddBuffer(&VBO2, AttribPointerLayout{ 0, 3, 8, 0 });
 
-	view = glm::lookAt(
-		cameraPosition,
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
+    Shader lightSourceShader(Reader::Open("Resources/Shaders/LightSource_VS.glsl").c_str(), Reader::Open("Resources/Shaders/LightSource_FS.glsl").c_str());
+    lightSourceShader.Use();
+    lightSourceShader.SetUniform3fv("color", lightColor);
 
-	projection = glm::perspective(glm::radians(45.0f), (float)context.GetScreenWidth() / (float)context.GetScreenHeight(), 0.1f, 100.0f);
+    glm::mat4 model2 = glm::mat4(1.0f);
+    model2 = glm::translate(model2, lightPosition);
 
-	cubeShader.SetUniform3fv("lightColor", lightColor);
-	cubeShader.SetUniform3fv("lightPosition", lightPosition);
-	cubeShader.SetUniform3fv("viewPos", cameraPosition);
-	cubeShader.SetUniformMat4fv("model", model);
-	cubeShader.SetUniformMat4fv("projection", projection);
-	cubeShader.SetUniformMat4fv("view", view);
+    lightSourceShader.SetUniformMat4fv("projection", projection);
 
-	VAO.Unbind();
-	IBO.Unbind();
-	VBO.Unbind();
+    VAO2.Unbind();
+    IBO2.Unbind();
+    VBO2.Unbind();
 
-	// New VAO for light source
-	VertexArrayObject VAO2;
-	VertexBufferObject VBO2(lightSource.GetVertexData());
-	IndexBuffer IBO2(lightSource.GetIndexData());
-	VAO2.AddBuffer(&VBO2, AttribPointerLayout{ 0, 3, 8, 0 }); // Index, size, stride, offset
+    PRINT(std::endl << "MAIN >> Rendering..." << std::endl);
 
-	Shader lightSourceShader(Reader::Open("Resources/Shaders/LightSource_VS.glsl").c_str(), Reader::Open("Resources/Shaders/LightSource_FS.glsl").c_str());
-	lightSourceShader.Use();
-	lightSourceShader.SetUniform3fv("color", lightColor);
+    const double targetFPS = 30.0;
+    const double targetFrameTime = 1.0 / targetFPS;
 
-	// Create transformations
-	glm::mat4 model2 = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-	model2 = glm::translate(model2, lightPosition);
+    while (context.IsRendering()) {
+        double startTime = glfwGetTime();
 
-	lightSourceShader.SetUniformMat4fv("projection", projection);
-	lightSourceShader.SetUniformMat4fv("view", view);
+        processInput(context.MainWindow, model2, lightPosition);
 
-	VAO2.Unbind();
-	IBO2.Unbind();
-	VBO2.Unbind();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	PRINT(std::endl << "MAIN >> Rendering..." << std::endl);
+        // Draw left view
+        glViewport(0, 0, context.GetScreenWidth() / 2, context.GetScreenHeight());
+        glm::mat4 view = glm::lookAt(cameraPosition, glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        cubeShader.SetUniformMat4fv("view", view);
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        cubeShader.SetUniformMat4fv("model", model);
+        VAO.Bind();
+        glDrawElements(GL_TRIANGLES, cube.GetIndexData().size(), GL_UNSIGNED_INT, nullptr);
 
+        // Draw right view
+        glViewport(context.GetScreenWidth() / 2, 0, context.GetScreenWidth() / 2, context.GetScreenHeight());
+        glm::mat4 view2 = glm::lookAt(cameraPosition, glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        cubeShader.SetUniformMat4fv("view", view2);
+        cubeShader.SetUniformMat4fv("model", model); // Use the same model matrix for the right view
+        glDrawElements(GL_TRIANGLES, cube.GetIndexData().size(), GL_UNSIGNED_INT, nullptr);
 
-	const double targetFPS = 30.0;
-	const double targetFrameTime = 1.0 / targetFPS;
+        lightSourceShader.Use();
+        lightSourceShader.SetUniformMat4fv("model", model2);
+        VAO2.Bind();
+        glDrawElements(GL_TRIANGLES, lightSource.GetIndexData().size(), GL_UNSIGNED_INT, nullptr);
 
-	while (context.IsRendering())
-	{
-		// Record the start time of the frame
-		double startTime = glfwGetTime();
+        glfwSwapBuffers(context.MainWindow);
 
-		processInput(context.MainWindow, model2, lightPosition);
+        double endTime = glfwGetTime();
+        double elapsedTime = endTime - startTime;
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        if (elapsedTime < targetFrameTime) {
+            double sleepTime = targetFrameTime - elapsedTime;
+            int sleepMilliseconds = static_cast<int>(sleepTime * 1000.0);
+            glfwWaitEventsTimeout(sleepTime - 0.001);
+        }
 
-		// Draw target object
-		cubeShader.Use();
-		model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		cubeShader.SetUniform3fv("lightPosition", lightPosition);
-		cubeShader.SetUniformMat4fv("model", model);
-		VAO.Bind();
-		glDrawElements(GL_TRIANGLES, cube.GetIndexData().size(), GL_UNSIGNED_INT, nullptr);
+        glfwPollEvents();
+    }
 
-		// Draw light source
-		lightSourceShader.Use();
-		lightSourceShader.SetUniformMat4fv("model", model2);
-		VAO2.Bind();
-		glDrawElements(GL_TRIANGLES, lightSource.GetIndexData().size(), GL_UNSIGNED_INT, nullptr);
+    glfwTerminate();
+    PRINT(std::endl << "MAIN >> Terminating..." << std::endl);
 
-		glfwSwapBuffers(context.MainWindow);
-
-		// Calculate the elapsed time for the frame
-		double endTime = glfwGetTime();
-		double elapsedTime = endTime - startTime;
-
-		// Check if we need to wait to achieve the target frame rate
-		if (elapsedTime < targetFrameTime)
-		{
-			// Calculate the time to sleep
-			double sleepTime = targetFrameTime - elapsedTime;
-
-			// Convert sleep time to milliseconds
-			int sleepMilliseconds = static_cast<int>(sleepTime * 1000.0);
-
-			// Use glfwWaitEventsTimeout to sleep and handle events
-			glfwWaitEventsTimeout(sleepTime - 0.001); // subtract a small amount to ensure slight overshoot
-		}
-
-		glfwPollEvents(); // checks events
-	}
-
-	glfwTerminate(); // clean glfw resources
-	PRINT(std::endl << "MAIN >> Terminating..." << std::endl);
-
-	return 0;
+    return 0;
 }
 
 // TODO work on lightpos
